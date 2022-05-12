@@ -466,7 +466,7 @@ function robot_mall() {
     "small-lamp", "red-wire", "green-wire", "arithmetic-combinator", "decider-combinator", "constant-combinator", "power-switch", "programmable-speaker",
 
     "repair-pack",
-    "nuclear-reactor", "heat-exchanger", "heat-pipe", "steam-turbine",
+    "boiler", "steam-engine", "nuclear-reactor", "heat-exchanger", "heat-pipe", "steam-turbine",
     "electric-mining-drill", "offshore-pump", "pumpjack",
     "steel-furnace", "electric-furnace",
     "assembling-machine-1", "assembling-machine-2", "assembling-machine-3", "oil-refinery", "chemical-plant", "centrifuge", "lab",
