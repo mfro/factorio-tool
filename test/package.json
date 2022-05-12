@@ -1,0 +1,17 @@
+{
+  "name": "factorio-tool-test",
+  "version": "0.1.0",
+  "private": true,
+  "main": "out/main.js",
+  "scripts": {
+    "watch": "rollup -c rollup.config.js --watch",
+    "build": "rollup -c rollup.config.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^4.1.0",
+    "@types/node": "^14.0.27",
+    "rollup": "^2.25.0",
+    "rollup-plugin-typescript2": "^0.27.2",
+    "typescript": "^3.9.7"
+  }
+}
