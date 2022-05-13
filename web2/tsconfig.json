@@ -1,0 +1,21 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.web.json",
+  "include": [
+    "env.d.ts",
+    "src/**/*",
+    "src/**/*.vue",
+    "../common/**/*.ts"
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "importsNotUsedAsValues": "remove",
+    "moduleResolution": "node",
+    "preserveValueImports": false,
+    "allowJs": true
+  },
+}
