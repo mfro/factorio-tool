@@ -228,9 +228,9 @@ function save_blueprint(src: Blueprint | BlueprintBook): string {
 }
 
 function robot_mall() {
-  let raw = '0eNqFkNtqwzAQRP9lnpUQB18SkT8pxciO2i7ohrQONUb/XsmB0odA33ZWe2Z2tWEyiw6RHENuoNm7BPm2IdGnU6b2eA0aEsTaQsApW1WyypiDUTYgC5C762/IJr8LaMfEpJ8uu1hHt9hJxzLwihcIPhXEu5pWbA590x47gbWUl+HYlYCyFkdvxkl/qQf5WCdnivNCPJa3+y/+QTHx+N/yy5RY7cjTu6h6/6kKG1RUXCNwQ871pJ2Wf35K4KFj2iPPl6Yd2uvQD82p7/qcfwDkxXE+';
-  let src = load_blueprint(raw);
-  console.log(JSON.stringify(src));
+  // let raw = '0eNqFkNtqwzAQRP9lnpUQB18SkT8pxciO2i7ohrQONUb/XsmB0odA33ZWe2Z2tWEyiw6RHENuoNm7BPm2IdGnU6b2eA0aEsTaQsApW1WyypiDUTYgC5C762/IJr8LaMfEpJ8uu1hHt9hJxzLwihcIPhXEu5pWbA590x47gbWUl+HYlYCyFkdvxkl/qQf5WCdnivNCPJa3+y/+QTHx+N/yy5RY7cjTu6h6/6kKG1RUXCNwQ871pJ2Wf35K4KFj2iPPl6Yd2uvQD82p7/qcfwDkxXE+';
+  // let src = load_blueprint(raw);
+  // console.log(JSON.stringify(src));
 
   let assemblers: Blueprint = {
     item: 'blueprint',
@@ -325,7 +325,7 @@ function robot_mall() {
 
     assemblers.entities.push(assembler = {
       entity_number: assemblers.entities.length + 1,
-      name: 'assembling-machine-3',
+      name: 'assembling-machine-2',
       position: assembler_position,
       recipe: name,
     });
@@ -417,30 +417,30 @@ function robot_mall() {
       }
 
       if ('stack_size' in item) {
-        let ratio = Math.max(1, Math.ceil(100 / recipe.energy_required));
+        let ratio = Math.max(1, Math.ceil(10 / recipe.energy_required));
         filter.count += Math.min(2 * item.stack_size, ingredient.amount * ratio);
       }
     }
 
-    let limits = recipe.ingredients.filter(i => include.includes(i.name));
-    if (limits.length == 1) {
-      let limit = all_items.find(i => i.name == limits[0].name)!;
-      if ('stack_size' in limit && 'stack_size' in item) {
-        let count = counts.get(item.name) ?? item.stack_size * 10;
-        let limit_count = counts.get(limit.name) ?? limit.stack_size * 10;
+    // let limits = recipe.ingredients.filter(i => include.includes(i.name));
+    // if (limits.length == 1) {
+    //   let limit = all_items.find(i => i.name == limits[0].name)!;
+    //   if ('stack_size' in limit && 'stack_size' in item) {
+    //     // let count = counts.get(item.name) ?? item.stack_size * 10;
+    //     // let limit_count = counts.get(limit.name) ?? limit.stack_size * 10;
 
-        console.log(`${item.name} (${count}) -> ${limit.name} (${limit_count})`);
-        0
-        connect('green', input_inserter, power);
-        input_inserter.control_behavior = {
-          circuit_condition: {
-            first_signal: { type: 'item', name: limit.name },
-            second_signal: { type: 'item', name: item.name },
-            comparator: '>',
-          },
-        };
-      }
-    }
+    //     // console.log(`${item.name} (${count}) -> ${limit.name} (${limit_count})`);
+
+    //     connect('green', input_inserter, power);
+    //     input_inserter.control_behavior = {
+    //       circuit_condition: {
+    //         first_signal: { type: 'item', name: limit.name },
+    //         second_signal: { type: 'item', name: item.name },
+    //         comparator: '>',
+    //       },
+    //     };
+    //   }
+    // }
   }
 
   assemblers.icons.push({
@@ -458,11 +458,12 @@ function robot_mall() {
     "medium-electric-pole", "big-electric-pole", "substation", "pipe", "pipe-to-ground", "pump",
     "rail", "train-stop", "rail-signal", "rail-chain-signal", "locomotive", "cargo-wagon", "fluid-wagon", "artillery-wagon",
     "car", "tank", "spidertron",
-    "logistic-chest-active-provider", "logistic-chest-passive-provider", "logistic-chest-storage", "logistic-chest-buffer", "logistic-chest-requester", "roboport",
+    "logistic-robot", "construction-robot", "logistic-chest-active-provider", "logistic-chest-passive-provider", "logistic-chest-storage", "logistic-chest-buffer", "logistic-chest-requester", "roboport",
     "small-lamp", "red-wire", "green-wire", "arithmetic-combinator", "decider-combinator", "constant-combinator", "power-switch", "programmable-speaker",
+    "cliff-explosives",
 
     "repair-pack",
-    "boiler", "steam-engine", "nuclear-reactor", "heat-exchanger", "heat-pipe", "steam-turbine",
+    "boiler", "steam-engine", "solar-panel", "accumulator", "nuclear-reactor", "heat-exchanger", "heat-pipe", "steam-turbine",
     "electric-mining-drill", "offshore-pump", "pumpjack",
     "steel-furnace", "electric-furnace",
     "assembling-machine-1", "assembling-machine-2", "assembling-machine-3", "oil-refinery", "chemical-plant", "centrifuge", "lab",
@@ -478,17 +479,17 @@ function robot_mall() {
     "stone-wall", "gate", "gun-turret", "laser-turret", "flamethrower-turret", "artillery-turret", "artillery-targeting-remote", "radar", "rocket-silo",
   ];
 
-  const counts = new Map<string, number>([
-    ['nuclear-reactor', 20], ['steam-turbine', 100],
-    ['solar-panel', 2000], ['accumulator', 2000],
-    ['centrifuge', 50],
-    ['speed-module', 50], ['speed-module-2', 50], ['speed-module-3', 2000],
-    ['efficiency-module', 50], ['efficiency-module-2', 50], ['efficiency-module-3', 50],
-    ['productivity-module', 50], ['productivity-module-2', 50], ['productivity-module-3', 2000],
-    ['solar-panel-equipment', 20], ['fusion-reactor-equipment', 20], ['battery-equipment', 20], /*['battery-mk2-equipment', 20],*/['belt-immunity-equipment', 20], /*['exoskeleton-equipment', 20],*/['personal-roboport-equipment', 20], /*['personal-roboport-mk2-equipment', 20],*/['night-vision-equipment', 20],
-    ['energy-shield-equipment', 20], /*['energy-shield-mk2-equipment', 20],*/ /*['personal-laser-defense-equipment', 20],*/['discharge-defense-equipment', 20], ['discharge-defense-remote', 10],
-    ['stone-wall', 4000],
-  ]);
+  // const counts = new Map<string, number>([
+  //   ['nuclear-reactor', 20], ['steam-turbine', 100],
+  //   // ['solar-panel', 2000], ['accumulator', 2000],s
+  //   ['centrifuge', 50],
+  //   ['speed-module', 50], ['speed-module-2', 50], ['speed-module-3', 2000],
+  //   ['efficiency-module', 50], ['efficiency-module-2', 50], ['efficiency-module-3', 50],
+  //   ['productivity-module', 50], ['productivity-module-2', 50], ['productivity-module-3', 2000],
+  //   ['solar-panel-equipment', 20], ['fusion-reactor-equipment', 20], ['battery-equipment', 20], /*['battery-mk2-equipment', 20],*/['belt-immunity-equipment', 20], /*['exoskeleton-equipment', 20],*/['personal-roboport-equipment', 20], /*['personal-roboport-mk2-equipment', 20],*/['night-vision-equipment', 20],
+  //   ['energy-shield-equipment', 20], /*['energy-shield-mk2-equipment', 20],*/ /*['personal-laser-defense-equipment', 20],*/['discharge-defense-equipment', 20], ['discharge-defense-remote', 10],
+  //   ['stone-wall', 4000],
+  // ]);
 
   // let splices = [
   //   [4, 16],
@@ -523,7 +524,7 @@ function robot_mall() {
   let insert = width - 1;
   for (let name of shifting) {
     include.splice(insert, 0, name);
-    console.log(`${name} moved to ${insert}`);
+    // console.log(`${name} moved to ${insert}`);
     insert += width;
   }
 
@@ -610,95 +611,80 @@ function robot_mall() {
         });
 
         if ('stack_size' in item) {
-          let count;
-          if (counts.has(item.name))
-            count = counts.get(item.name)!;
-          else if (include.includes(item.name))
-            count = item.stack_size * 10;
-          else
-            count = 0;
+          const count = 0;
+          // let count;
+          // if (counts.has(item.name)) {
+          //   count = counts.get(item.name)!;
+          //   console.log(`${item.name} ${count} ${item.stack_size * 10}`)
+          // } else if (include.includes(item.name)) {
+          //   count = item.stack_size * 10;
+          // } else {
+          //   count = 0;
+          // }
 
-          // let a, b, c;
-          // controls.entities.push(a = {
-          //   entity_number: controls.entities.length + 1,
-          //   name: 'small-lamp',
-          //   position: { x: x * 2 + 1, y: y * 2 },
-          //   control_behavior: {
-          //     circuit_condition: {
-          //       first_signal: { type: 'item', name: item.name },
-          //       constant: 0,
-          //       comparator: '<',
-          //     },
-          //   },
-          // });
-          // controls.entities.push(b = {
-          //   entity_number: controls.entities.length + 1,
-          //   name: 'small-lamp',
-          //   position: { x: x * 2, y: y * 2 + 1 },
-          //   control_behavior: {
-          //     circuit_condition: {
-          //       first_signal: { type: 'item', name: item.name },
-          //       constant: 0,
-          //       comparator: '<',
-          //     },
-          //   },
-          // });
-          // controls.entities.push(c = {
-          //   entity_number: controls.entities.length + 1,
-          //   name: 'small-lamp',
-          //   position: { x: x * 2 + 1, y: y * 2 + 1 },
-          //   control_behavior: {
-          //     circuit_condition: {
-          //       first_signal: { type: 'item', name: item.name },
-          //       constant: 0,
-          //       comparator: '<',
-          //     },
-          //   },
-          // });
+          let worldX = i;
+          let worldY = Math.floor(y / 2);
 
-          controls.entities.push({
-            entity_number: controls.entities.length + 1,
-            name: 'constant-combinator',
-            position: { x: x, y: y },
-            control_behavior: {
-              filters: [
-                {
-                  index: 1,
-                  signal: {
-                    type: 'item',
-                    name: item.name
-                  },
-                  count,
-                }
-              ]
+          let index = k % 10 + (y % 2) * 10;
+
+          let entity = controls.entities.find(e => e.name == 'constant-combinator' && e.position.x == worldX && e.position.y == worldY);
+          if (!entity) {
+            controls.entities.push(entity = {
+              entity_number: controls.entities.length + 1,
+              name: 'constant-combinator',
+              position: { x: worldX, y: worldY },
+              control_behavior: {
+                filters: []
+              },
+            });
+          }
+
+          entity.control_behavior!.filters.push({
+            index: index + 1,
+            signal: {
+              type: 'item',
+              name: item.name
             },
+            count,
           });
+
+
+          function connectHelper(offsetX: number, offsetY: number) {
+            let a = controls.entities.find(a => a.position.x == worldX && a.position.y == worldY);
+            let b = controls.entities.find(a => a.position.x == worldX + offsetX && a.position.y == worldY + offsetY);
+            if (a && b) connect('green', a, b);
+          }
+
+          connectHelper(-1, 0);
+          connectHelper(1, 0);
+          connectHelper(0, -1);
+          connectHelper(0, 1);
 
           // connect('green', a, c);
           // connect('green', b, c);
         }
 
-        if (k % 10 > 0) {
-          let a = controls.entities.find(a => a.position.x == x && a.position.y == y);
-          let b = controls.entities.find(a => a.position.x == x - 1 && a.position.y == y);
-          if (a == null || b == null) throw new Error(`? ${x} ${y} `);
-          connect('green', a, b);
+        // if (k % 10 > 0) {
+        //   let a = controls.entities.find(a => a.position.x == x && a.position.y == y);
+        //   let b = controls.entities.find(a => a.position.x == x - 1 && a.position.y == y);
+        //   if (a == null || b == null) throw new Error(`? ${x} ${y} `);
+        //   connect('green', a, b);
 
-          // let c = controls.entities.find(a => a.position.x == x * 2 && a.position.y == y * 2 + 1);
-          // let d = controls.entities.find(a => a.position.x == x * 2 - 1 && a.position.y == y * 2 + 1);
-          // if (c == null || d == null) throw new Error(`? ${x} ${y} `);
-          // connect('green', c, d);
-        } else if (j > 0) {
-          let a = controls.entities.find(a => a.position.x == x && a.position.y == y);
-          let b = controls.entities.find(a => a.position.x == x && a.position.y == y - 1);
-          if (a == null || b == null) throw new Error(`? ${x} ${y}`);
-          connect('green', a, b);
+        //   // let c = controls.entities.find(a => a.position.x == x * 2 && a.position.y == y * 2 + 1);
+        //   // let d = controls.entities.find(a => a.position.x == x * 2 - 1 && a.position.y == y * 2 + 1);
+        //   // if (c == null || d == null) throw new Error(`? ${x} ${y} `);
+        //   // connect('green', c, d);
+        // } else if (j > 0) {
+        //   let a = controls.entities.find(a => a.position.x == x && a.position.y == y);
+        //   let b = controls.entities.find(a => a.position.x == x && a.position.y == y - 1);
+        //   if (a == null || b == null) throw new Error(`? ${x} ${y}`);
+        //   connect('green', a, b);
 
-          // let c = controls.entities.find(a => a.position.x == x * 2 + 1 && a.position.y == y * 2);
-          // let d = controls.entities.find(a => a.position.x == x * 2 + 1 && a.position.y == y * 2 - 1);
-          // if (c == null || d == null) throw new Error(`? ${x} ${y} `);
-          // connect('green', c, d);
-        }
+        //   // let c = controls.entities.find(a => a.position.x == x * 2 + 1 && a.position.y == y * 2);
+        //   // let d = controls.entities.find(a => a.position.x == x * 2 + 1 && a.position.y == y * 2 - 1);
+        //   // if (c == null || d == null) throw new Error(`? ${x} ${y} `);
+        //   // connect('green', c, d);
+        // }
       }
     }
   }
