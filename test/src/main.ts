@@ -452,20 +452,20 @@ function robot_mall() {
   })
 
   let include = [
-    "steel-chest", "storage-tank",
+    "iron-chest", "steel-chest", "storage-tank",
     "transport-belt", "fast-transport-belt", "express-transport-belt", "underground-belt", "fast-underground-belt", "express-underground-belt", "splitter", "fast-splitter", "express-splitter",
-    "inserter", "long-handed-inserter", "fast-inserter", "filter-inserter", "stack-inserter", "stack-filter-inserter",
+    "burner-inserter", "inserter", "long-handed-inserter", "fast-inserter", "filter-inserter", "stack-inserter", "stack-filter-inserter",
     "medium-electric-pole", "big-electric-pole", "substation", "pipe", "pipe-to-ground", "pump",
     "rail", "train-stop", "rail-signal", "rail-chain-signal", "locomotive", "cargo-wagon", "fluid-wagon", "artillery-wagon",
     "car", "tank", "spidertron",
     "logistic-robot", "construction-robot", "logistic-chest-active-provider", "logistic-chest-passive-provider", "logistic-chest-storage", "logistic-chest-buffer", "logistic-chest-requester", "roboport",
     "small-lamp", "red-wire", "green-wire", "arithmetic-combinator", "decider-combinator", "constant-combinator", "power-switch", "programmable-speaker",
-    "cliff-explosives",
+    "hazard-concrete", "refined-hazard-concrete", "cliff-explosives",
 
     "repair-pack",
     "boiler", "steam-engine", "solar-panel", "accumulator", "nuclear-reactor", "heat-exchanger", "heat-pipe", "steam-turbine",
-    "electric-mining-drill", "offshore-pump", "pumpjack",
-    "steel-furnace", "electric-furnace",
+    "burner-mining-drill", "electric-mining-drill", "offshore-pump", "pumpjack",
+    "stone-furnace", "steel-furnace", "electric-furnace",
     "assembling-machine-1", "assembling-machine-2", "assembling-machine-3", "oil-refinery", "chemical-plant", "centrifuge", "lab",
     "beacon",
 
@@ -479,17 +479,18 @@ function robot_mall() {
     "stone-wall", "gate", "gun-turret", "laser-turret", "flamethrower-turret", "artillery-turret", "artillery-targeting-remote", "radar", "rocket-silo",
   ];
 
-  // const counts = new Map<string, number>([
-  //   ['nuclear-reactor', 20], ['steam-turbine', 100],
-  //   // ['solar-panel', 2000], ['accumulator', 2000],s
-  //   ['centrifuge', 50],
-  //   ['speed-module', 50], ['speed-module-2', 50], ['speed-module-3', 2000],
-  //   ['efficiency-module', 50], ['efficiency-module-2', 50], ['efficiency-module-3', 50],
-  //   ['productivity-module', 50], ['productivity-module-2', 50], ['productivity-module-3', 2000],
-  //   ['solar-panel-equipment', 20], ['fusion-reactor-equipment', 20], ['battery-equipment', 20], /*['battery-mk2-equipment', 20],*/['belt-immunity-equipment', 20], /*['exoskeleton-equipment', 20],*/['personal-roboport-equipment', 20], /*['personal-roboport-mk2-equipment', 20],*/['night-vision-equipment', 20],
-  //   ['energy-shield-equipment', 20], /*['energy-shield-mk2-equipment', 20],*/ /*['personal-laser-defense-equipment', 20],*/['discharge-defense-equipment', 20], ['discharge-defense-remote', 10],
-  //   ['stone-wall', 4000],
-  // ]);
+  const counts = new Map<string, number>([
+    ['nuclear-reactor', 20], ['steam-turbine', 400],
+    ['solar-panel', 2000], ['accumulator', 2000],
+    ['centrifuge', 50],
+    ['power-armor-mk-2', 1],
+    ['stone-wall', 4000],
+    // ['speed-module', 50], ['speed-module-2', 50], ['speed-module-3', 2000],
+    // ['efficiency-module', 50], ['efficiency-module-2', 50], ['efficiency-module-3', 50],
+    // ['productivity-module', 50], ['productivity-module-2', 50], ['productivity-module-3', 2000],
+    // ['solar-panel-equipment', 20], ['fusion-reactor-equipment', 20], ['battery-equipment', 20], /*['battery-mk2-equipment', 20],*/['belt-immunity-equipment', 20], /*['exoskeleton-equipment', 20],*/['personal-roboport-equipment', 20], /*['personal-roboport-mk2-equipment', 20],*/['night-vision-equipment', 20],
+    // ['energy-shield-equipment', 20], /*['energy-shield-mk2-equipment', 20],*/ /*['personal-laser-defense-equipment', 20],*/['discharge-defense-equipment', 20], ['discharge-defense-remote', 10],
+  ]);
 
   // let splices = [
   //   [4, 16],
@@ -610,17 +611,27 @@ function robot_mall() {
           request_filters: [{ index: 1, name: item.name, count: 0 }]
         });
 
+        connectHelper(-1, 0);
+        connectHelper(1, 0);
+        connectHelper(0, -1);
+        connectHelper(0, 1);
+
+        function connectHelper(offsetX: number, offsetY: number) {
+          let a = storage.entities.find(a => a.position.x == x && a.position.y == y);
+          let b = storage.entities.find(a => a.position.x == x + offsetX && a.position.y == y + offsetY);
+          if (a && b) connect('green', a, b);
+        }
+
         if ('stack_size' in item) {
-          const count = 0;
-          // let count;
-          // if (counts.has(item.name)) {
-          //   count = counts.get(item.name)!;
-          //   console.log(`${item.name} ${count} ${item.stack_size * 10}`)
-          // } else if (include.includes(item.name)) {
-          //   count = item.stack_size * 10;
-          // } else {
-          //   count = 0;
-          // }
+          let count;
+          if (counts.has(item.name)) {
+            count = counts.get(item.name)!;
+            console.log(`${item.name} ${count} ${item.stack_size * 10}`)
+          } else if (include.includes(item.name)) {
+            count = item.stack_size * 10;
+          } else {
+            count = 0;
+          }
 
           let worldX = i;
           let worldY = Math.floor(y / 2);
