@@ -483,7 +483,7 @@ function robot_mall() {
     ['nuclear-reactor', 20], ['steam-turbine', 400],
     ['solar-panel', 2000], ['accumulator', 2000],
     ['centrifuge', 50],
-    ['power-armor-mk-2', 1],
+    ['power-armor-mk2', 1],
     ['stone-wall', 4000],
     // ['speed-module', 50], ['speed-module-2', 50], ['speed-module-3', 2000],
     // ['efficiency-module', 50], ['efficiency-module-2', 50], ['efficiency-module-3', 50],
