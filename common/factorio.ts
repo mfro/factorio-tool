@@ -1,10 +1,26 @@
-import data from './data/vanilla-1.1.19.json';
+import data from './data/space-age-2.0.11.json';
 
 export { data };
 
-export type Item = (typeof data.items)[keyof typeof data.items];
-export type Recipe = (typeof data.recipes)[keyof typeof data.recipes];
+export type Item = (typeof data.items)[number];
+export type Recipe = (typeof data.recipes)[number];
 export type Quantity = { name: string, amount: number };
+
+function leftShiftBytes(value: number, bytes: number) {
+  return value * (2 ** (bytes * 8));
+}
+
+export function versionNumber(major: number, minor: number, patch: number, dev = 0) {
+  return leftShiftBytes(major, 6)
+    + leftShiftBytes(minor, 4)
+    + leftShiftBytes(patch, 2)
+    + dev;
+}
+
+export const v1_0_0 = versionNumber(1, 0, 0);
+export const v2_0_0 = versionNumber(2, 0, 0);
+
+// https://wiki.factorio.com/Blueprint_string_format
 
 export interface BlueprintBook {
   item: string;
@@ -12,6 +28,8 @@ export interface BlueprintBook {
   label_color?: Color;
   blueprints: { index: number, blueprint: Blueprint }[];
   active_index: number;
+  icons?: Icon[];
+  description?: string;
   version: number;
 }
 
@@ -19,10 +37,10 @@ export interface Blueprint {
   item: string;
   label: string;
   label_color?: Color;
-  entities: Entity[];
-  tiles: Tile[];
-  icons: Icon[];
-  schedules: Schedule[];
+  entities?: Entity[];
+  tiles?: Tile[];
+  icons?: Icon[];
+  schedules?: Schedule[];
   version: number;
 }
 
@@ -44,7 +62,7 @@ export interface Entity {
   orientation?: number;
   connections?: { [point: number]: ConnectionPoint };
   control_behavior?: any;
-  items?: Item[];
+  items?: { [name: string]: number };
   recipe?: string;
   bar?: number;
   inventory?: Inventory;
@@ -133,10 +151,18 @@ export interface InfinityFilter {
   index: number;
 }
 
+export type ComparatorString = '=' | '>' | '<' | '≥' | '>=' | '≤' | '<=' | '≠' | '!=';
 export interface LogisticFilter {
   name: string;
   index: number;
   count: number;
+  quality?: string;
+  comparator?: ComparatorString;
+}
+
+export interface LogisticSection {
+  index: number;
+  filters: LogisticFilter[];
 }
 
 export interface SpeakerParameter {
