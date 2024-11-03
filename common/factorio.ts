@@ -76,7 +76,7 @@ export interface Entity {
   override_stack_size?: number;
   drop_position?: Position;
   pickup_position?: Position;
-  request_filters?: LogisticFilter[];
+  request_filters?: { sections: LogisticSection[] };
   request_from_buffers?: boolean;
   parameters?: SpeakerParameter;
   alert_parameters?: SpeakerAlertParameter;

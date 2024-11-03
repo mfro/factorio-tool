@@ -5,6 +5,7 @@ import * as b64 from 'js-base64';
 import App from './App.vue'
 
 import data from '../../common/data/vanilla-1.0.0.json';
+import { assert } from '../../common/util';
 
 type Item = (typeof data.items)[keyof typeof data.items];
 type Recipe = (typeof data.recipes)[keyof typeof data.recipes];
@@ -168,7 +169,7 @@ function base_layout() {
       return recipes.get(name)!;
 
     let recipe = all_recipes.find(r => r.results.length == 1 && r.results[0].name == name);
-    if (recipe == null) throw new Error('no recipe: ' + name);
+    assert(recipe != null, 'no recipe: ' + name);
     recipes.set(name, recipe);
 
     for (let ingredient of recipe.ingredients) {
@@ -183,7 +184,7 @@ function base_layout() {
       return depths.get(name)!;
 
     let recipe = recipes.get(name);
-    if (recipe == null) throw new Error('no recipe: ' + name);
+    assert(recipe != null, 'no recipe: ' + name);
     let ingredients = (recipe.ingredients as Quantity[]);
 
     let input_count = ingredients.reduce((sum, v) => sum + v.amount, 0);
@@ -231,14 +232,14 @@ function base_layout() {
       if (recipe == null) continue;
 
       let index = bus.findIndex(q => q.name == name);
-      if (index < 0) throw new Error(`not on the bus: ${name}`);
+      assert(index != -1, `not on the bus: ${name}`);
       let amount = bus.splice(index, 1)[0].amount;
 
       let ratio = amount / recipe.results[0].amount;
 
       for (let ingredient of recipe.ingredients) {
         let item = all_items.find(i => i.name == ingredient.name);
-        if (item == null) throw new Error(`not an item: ${item}`);
+        assert(item != null, `not an item: ${item}`);
         if (item.type == 'fluid') continue;
 
         let input = bus.find(q => q.name == ingredient.name);

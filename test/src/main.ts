@@ -1,14 +1,12 @@
 import * as zlib from 'zlib';
 
 import { Blueprint, BlueprintBook, data, Entity, Item, LogisticSection, Quantity, Recipe, v2_0_0 } from '../../common/factorio';
+import { assert } from '../../common/util';
 
 const VERSION_NUMBER = v2_0_0;
 
 const disabled_recipes = new Set([
   'loader', 'fast-loader', 'express-loader', 'turbo-loader',
-  'small-plane',
-  'player-port',
-  'electric-energy-interface',
 ]);
 
 const disabled_recipe_categories = new Set([
@@ -130,7 +128,7 @@ function base_layout() {
       return recipes.get(name)!;
 
     const recipe = all_recipes.find(r => r.results.length == 1 && r.results[0].name == name);
-    if (recipe == null) throw new Error('no recipe: ' + name);
+    assert(recipe != null, 'no recipe: ' + name);
     recipes.set(name, recipe);
 
     for (const ingredient of recipe.ingredients) {
@@ -145,7 +143,7 @@ function base_layout() {
       return depths.get(name)!;
 
     const recipe = recipes.get(name);
-    if (recipe == null) throw new Error('no recipe: ' + name);
+    assert(recipe != null, 'no recipe: ' + name);
     const ingredients = (recipe.ingredients as Quantity[]);
 
     const input_count = ingredients.reduce((sum, v) => sum + v.amount, 0);
@@ -193,14 +191,14 @@ function base_layout() {
       if (recipe == null) continue;
 
       const index = bus.findIndex(q => q.name == name);
-      if (index < 0) throw new Error(`not on the bus: ${name}`);
+      assert(index != -1, `not on the bus: ${name}`);
       const amount = bus.splice(index, 1)[0].amount;
 
       const ratio = amount / recipe.results[0].amount;
 
       for (const ingredient of recipe.ingredients) {
         const item = all_items.find(i => i.key == ingredient.name);
-        if (item == null) throw new Error(`not an item: ${item}`);
+        assert(item != null, `not an item: ${item}`);
         if (item.type == 'fluid') continue;
 
         let input = bus.find(q => q.name == ingredient.name);
@@ -263,15 +261,6 @@ function connect_wire(color: 'green' | 'red', a: Entity, b: Entity) {
 
   if (!b.connections[1][color]!.find(c => c.entity_id == a.entity_number))
     b.connections[1][color]!.push({ entity_id: a.entity_number });
-}
-
-function wire_helper(scope: Blueprint, x: number, y: number) {
-  const a = scope.entities!.find(a => a.position.x == x && a.position.y == y);
-
-  return function connect(offset_x: number, offset_y: number) {
-    const b = scope.entities!.find(a => a.position.x == x + offset_x && a.position.y == y + offset_y);
-    if (a && b) connect_wire('green', a, b);
-  };
 }
 
 function robot_mall() {
@@ -357,13 +346,20 @@ function robot_mall() {
       recipe: name,
     });
 
-    input = assemblers.entities!.find(p => p.name == 'logistic-chest-requester' && p.position.x == input_position.x && p.position.y == input_position.y);
+    input = assemblers.entities!.find(p => p.name == 'requester-chest' && p.position.x == input_position.x && p.position.y == input_position.y);
     if (input == null) {
       assemblers.entities!.push(input = {
         entity_number: assemblers.entities!.length,
-        name: 'logistic-chest-requester',
+        name: 'requester-chest',
         position: input_position,
-        request_filters: [],
+        request_filters: {
+          sections: [
+            {
+              index: 1,
+              filters: [],
+            }
+          ],
+        },
       });
     }
 
@@ -424,22 +420,25 @@ function robot_mall() {
 
     const item = all_items.find(r => r.key == name);
     const recipe = all_recipes.find(r => r.results.length == 1 && r.results[0].name == name);
-    if (item == null) throw new Error(`no item: ${name}`);
-    if (recipe == null) throw new Error(`no recipe: ${name}`);
+    assert(item != null, `no item: ${name}`);
+    assert(recipe != null, `no recipe: ${name}`);
     for (const ingredient of recipe.ingredients) {
       const item = all_items.find(i => i.key == ingredient.name);
-      if (item == null) throw new Error(`no item: ${ingredient.name}`);
+      assert(item != null, `no item: ${ingredient.name}`);
       if (item.type == 'fluid') {
         assembler.direction = 2;
         continue;
       }
 
-      let filter = input.request_filters!.find(f => f.name == ingredient.name);
+      const filters = input.request_filters!.sections[0].filters;
+      let filter = filters!.find(f => f.name == ingredient.name);
       if (filter == null) {
-        input.request_filters!.push(filter = {
-          index: input.request_filters!.length + 1,
+        filters!.push(filter = {
+          index: filters!.length + 1,
           name: ingredient.name,
           count: 0,
+          quality: 'normal',
+          comparator: '=',
         });
       }
 
@@ -481,7 +480,7 @@ function robot_mall() {
   const include = [
     "wooden-chest", "iron-chest", "steel-chest", "storage-tank",
     "transport-belt", "fast-transport-belt", "express-transport-belt", "underground-belt", "fast-underground-belt", "express-underground-belt", "splitter", "fast-splitter", "express-splitter",
-    "burner-inserter", "inserter", "long-handed-inserter", "fast-inserter", "bulk-inserter", "stack-inserter",
+    "burner-inserter", "inserter", "long-handed-inserter", "fast-inserter", "bulk-inserter",
     "small-electric-pole", "medium-electric-pole", "big-electric-pole", "substation", "pipe", "pipe-to-ground", "pump",
     "rail", "rail-ramp", "rail-support", "train-stop", "rail-signal", "rail-chain-signal", "locomotive", "cargo-wagon", "fluid-wagon", "artillery-wagon",
     "car", "tank", "spidertron",
@@ -514,6 +513,8 @@ function robot_mall() {
   ];
 
   for (const group of groups) {
+    if (group.name == 'other') continue;
+
     for (const subgroup of group.subgroups) {
       const items = subgroup.items.filter(i => !include.includes(i.item.key));
       console.log(items.map(i => i.item.key).join(' '));
@@ -523,7 +524,7 @@ function robot_mall() {
   for (const key of include) {
     const match = groups.find(g => g.subgroups.some(s => s.items.some(i => i.item.key == key)));
 
-    if (match == null) throw new Error(`no recipe: ${key}`);
+    assert(match != null, `no recipe: ${key}`);
   }
 
   const counts = new Map<string, number>([
@@ -556,11 +557,11 @@ function robot_mall() {
 
   for (let i = 0; i < include.length; ++i) {
     const recipe = all_recipes.find(r => r.results.length == 1 && r.results[0].name == include[i]);
-    if (recipe == null) throw new Error(`no recipe: ${include[i]}`);
+    assert(recipe != null, `no recipe: ${include[i]}`);
 
     for (const ingredient of recipe.ingredients) {
       const item = all_items.find(r => r.key == ingredient.name);
-      if (item == null) throw new Error(`no item: ${ingredient.name}`);
+      assert(item != null, `no item: ${ingredient.name}`);
       if (item.type != 'fluid') continue;
 
       const name = include.splice(i, 1)[0];
@@ -572,7 +573,6 @@ function robot_mall() {
   let insert = width - 1;
   for (const name of shifting) {
     include.splice(insert, 0, name);
-    // console.log(`${name} moved to ${insert}`);
     insert += width;
   }
 
@@ -595,8 +595,6 @@ function robot_mall() {
     const b = assemblers.entities!.find(e => e.position.x == a.position.x + 9 && e.position.y == a.position.y);
     const c = assemblers.entities!.find(e => e.position.x == a.position.x && e.position.y == a.position.y + 9);
 
-    // console.log(a.position, b, c);
-
     if (b) connect_wire('green', a, b);
     if (c) connect_wire('green', a, c);
   }
@@ -614,7 +612,7 @@ function robot_mall() {
   storage.icons!.push({
     index: 1,
     signal: {
-      name: 'logistic-chest-storage',
+      name: 'storage-chest',
       type: 'item',
     }
   });
@@ -650,10 +648,10 @@ function robot_mall() {
 
   controls.entities?.push(control_combinator);
 
-  const f_groups = groups.filter(a => a.name != 'intermediate-products');
+  const f_groups = groups.filter(a => a.name != 'intermediate-products' && a.name != 'other');
 
   let section_index = 1;
-  for (const group of f_groups) {
+  for (let i = 0; i < f_groups.length; ++i) {
     const section: LogisticSection = {
       index: section_index++,
       filters: [],
@@ -661,26 +659,38 @@ function robot_mall() {
 
     let bump = 0;
 
-    for (let j = 0; j < group.subgroups.length; ++j) {
-      for (let k = 0; k < group.subgroups[j].items.length; ++k) {
+    for (let j = 0; j < f_groups[i].subgroups.length; ++j) {
+      for (let k = 0; k < f_groups[i].subgroups[j].items.length; ++k) {
         if (k > 0 && k % 10 == 0) bump += 1;
 
-        const { item } = group.subgroups[j].items[k];
+        const { item } = f_groups[i].subgroups[j].items[k];
 
-        if (!include.includes(item.key)) continue;
-
-        const x = k % 10;
+        const x = i * 11 + (k % 10);
         const y = j + bump;
 
-        const filter_index = 1 + (y * 10) + x;
+        const filter_index = 1 + ((j + bump) * 10) + (k % 10);
 
         storage.entities!.push({
           entity_number: storage.entities!.length + 1,
-          name: 'logistic-chest-storage',
+          name: 'storage-chest',
           position: { x, y },
-          request_filters: [{ index: 1, name: item.key, count: 0 }]
+          request_filters: {
+            sections: [
+              {
+                index: 1,
+                filters: [
+                  {
+                    index: 1,
+                    name: item.key,
+                    count: 0,
+                    quality: 'normal',
+                    comparator: '=',
+                  },
+                ],
+              },
+            ],
+          },
         });
-
 
         if (item.stack_size) {
           let count;
@@ -709,103 +719,6 @@ function robot_mall() {
     }
   }
 
-  // for (let i = 0; i < f_groups.length; ++i) {
-  //   let bump = 0;
-
-  //   for (let j = 0; j < f_groups[i].subgroups.length; ++j) {
-  //     for (let k = 0; k < f_groups[i].subgroups[j].items.length; ++k) {
-  //       const { item } = f_groups[i].subgroups[j].items[k];
-
-  //       if (k > 0 && k % 10 == 0) bump += 1;
-
-  //       const x = i * 11 + (k % 10);
-  //       const y = j + bump;
-
-  //       storage.entities!.push({
-  //         entity_number: storage.entities!.length + 1,
-  //         name: 'logistic-chest-storage',
-  //         position: { x, y },
-  //         request_filters: [{ index: 1, name: item.key, count: 0 }]
-  //       });
-
-  //       const connect = wire_helper(storage, x, y);
-  //       connect(-1, 0);
-  //       connect(1, 0);
-  //       connect(0, -1);
-  //       connect(0, 1);
-
-  //       if (item.stack_size) {
-  //         let count;
-  //         if (counts.has(item.key)) {
-  //           count = counts.get(item.key)!;
-  //           console.log(`${item.key} ${count} ${item.stack_size * 10}`)
-  //         } else if (include.includes(item.key)) {
-  //           count = item.stack_size * 10;
-  //         } else {
-  //           count = 0;
-  //         }
-
-  //         const world_x = i;
-  //         const world_y = Math.floor(y / 2);
-
-  //         const index = k % 10 + (y % 2) * 10;
-
-  //         // let entity = controls.entities!.find(e => e.name == 'constant-combinator' && e.position.x == world_x && e.position.y == world_y);
-  //         // if (!entity) {
-  //         //   controls.entities!.push(entity = {
-  //         //     entity_number: controls.entities!.length + 1,
-  //         //     name: 'constant-combinator',
-  //         //     position: { x: world_x, y: world_y },
-  //         //     control_behavior: {
-  //         //       filters: []
-  //         //     },
-  //         //   });
-  //         // }
-
-  //         control_combinator.control_behavior!.filters.push({
-  //           index: index + 1,
-  //           signal: {
-  //             type: 'item',
-  //             name: item.key
-  //           },
-  //           count: 0,
-  //         });
-
-  //         // const connect = wire_helper(controls, world_x, world_y);
-  //         // connect(-1, 0);
-  //         // connect(1, 0);
-  //         // connect(0, -1);
-  //         // connect(0, 1);
-
-  //         // connect('green', a, c);
-  //         // connect('green', b, c);
-  //       }
-
-  //       // if (k % 10 > 0) {
-  //       //   const a = controls.entities.find(a => a.position.x == x && a.position.y == y);
-  //       //   const b = controls.entities.find(a => a.position.x == x - 1 && a.position.y == y);
-  //       //   if (a == null || b == null) throw new Error(`? ${x} ${y} `);
-  //       //   connect('green', a, b);
-
-  //       //   // const c = controls.entities.find(a => a.position.x == x * 2 && a.position.y == y * 2 + 1);
-  //       //   // const d = controls.entities.find(a => a.position.x == x * 2 - 1 && a.position.y == y * 2 + 1);
-  //       //   // if (c == null || d == null) throw new Error(`? ${x} ${y} `);
-  //       //   // connect('green', c, d);
-  //       // } else if (j > 0) {
-  //       //   const a = controls.entities.find(a => a.position.x == x && a.position.y == y);
-  //       //   const b = controls.entities.find(a => a.position.x == x && a.position.y == y - 1);
-  //       //   if (a == null || b == null) throw new Error(`? ${x} ${y}`);
-  //       //   connect('green', a, b);
-
-  //       //   // const c = controls.entities.find(a => a.position.x == x * 2 + 1 && a.position.y == y * 2);
-  //       //   // const d = controls.entities.find(a => a.position.x == x * 2 + 1 && a.position.y == y * 2 - 1);
-  //       //   // if (c == null || d == null) throw new Error(`? ${x} ${y} `);
-  //       //   // connect('green', c, d);
-  //       // }
-  //     }
-  //   }
-  // }
-
   const book: BlueprintBook = {
     item: 'blueprint-book',
     label: 'mall',
@@ -814,7 +727,8 @@ function robot_mall() {
     version: VERSION_NUMBER,
   };
 
-  console.log(save_blueprint(book));
+  console.log(save_blueprint(storage));
+  console.log(save_blueprint(controls));
 }
 
 function experiments() {
@@ -839,7 +753,7 @@ function experiments() {
     ],
     "item": "blueprint",
     "label": "test",
-    "version": 281479276527617
+    "version": v2_0_0,
   };
 
   console.log(save_blueprint(x));
@@ -853,6 +767,6 @@ function dump_blueprint(raw: string) {
 if (process.argv[2]) {
   dump_blueprint(process.argv[2])
 } else {
-  // experiments();
-  robot_mall();
+  experiments();
+  // robot_mall();
 }
