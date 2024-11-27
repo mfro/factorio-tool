@@ -1,6 +1,6 @@
 import * as zlib from 'zlib';
 
-import { Blueprint, BlueprintBook, data, Entity, Item, LogisticSection, Quantity, Recipe, v2_0_0 } from '../../common/factorio';
+import { Blueprint, BlueprintBook, data, Entity, Item, LogisticFilter, LogisticSection, Quantity, Recipe, v2_0_0 } from '../../common/factorio';
 import { assert } from '../../common/util';
 
 const VERSION_NUMBER = v2_0_0;
@@ -264,6 +264,8 @@ function connect_wire(color: 'green' | 'red', a: Entity, b: Entity) {
 }
 
 function robot_mall() {
+  const priority_cache = new Map<string, number>();
+
   const assemblers: Blueprint = {
     item: 'blueprint',
     label: 'assmblers',
@@ -273,6 +275,26 @@ function robot_mall() {
     schedules: [],
     version: VERSION_NUMBER,
   };
+
+  function get_priority(item_name: string): number {
+    if (!include.includes(item_name)) {
+      return 1;
+    }
+
+    let priority = priority_cache.get(item_name);
+
+    if (priority === undefined) {
+      const recipe = all_recipes.find(r => r.results.length == 1 && r.results[0].name == item_name);
+      assert(recipe != null, `no recipe: ${item_name}`);
+
+      const ingredient_max = recipe.ingredients.reduce((max, v) => Math.max(max, get_priority(v.name)), 0);
+
+      priority = ingredient_max + 1;
+      priority_cache.set(item_name, priority);
+    }
+
+    return priority;
+  }
 
   function add_recipe(x: number, y: number, name: string) {
     type pos = { x: number, y: number };
@@ -447,7 +469,6 @@ function robot_mall() {
         filter.count += Math.min(2 * item.stack_size, ingredient.amount * ratio);
       }
     }
-
     // const limits = recipe.ingredients.filter(i => include.includes(i.name));
     // if (limits.length == 1) {
     //   const limit = all_items.find(i => i.name == limits[0].name)!;
@@ -648,22 +669,48 @@ function robot_mall() {
 
   controls.entities?.push(control_combinator);
 
-  const f_groups = groups.filter(a => a.name != 'intermediate-products' && a.name != 'other');
+  const priorities: Blueprint = {
+    item: 'blueprint',
+    label: 'priorities',
+    entities: [],
+    tiles: [],
+    icons: [],
+    schedules: [],
+    version: VERSION_NUMBER,
+  };
 
-  let section_index = 1;
-  for (let i = 0; i < f_groups.length; ++i) {
-    const section: LogisticSection = {
-      index: section_index++,
-      filters: [],
-    };
+  priorities.icons!.push({
+    index: 1,
+    signal: {
+      name: 'constant-combinator',
+      type: 'item',
+    }
+  });
+
+  const priority_combinator: Entity = {
+    entity_number: controls.entities!.length + 1,
+    name: 'constant-combinator',
+    position: { x: 0, y: 0 },
+    control_behavior: {
+      sections: {
+        sections: []
+      },
+    },
+  };
+
+  priorities.entities?.push(priority_combinator);
+
+  for (let i = 0; i < groups.length; ++i) {
+    const control_filters: LogisticFilter[] = [];
+    const priority_filters: LogisticFilter[] = [];
 
     let bump = 0;
 
-    for (let j = 0; j < f_groups[i].subgroups.length; ++j) {
-      for (let k = 0; k < f_groups[i].subgroups[j].items.length; ++k) {
+    for (let j = 0; j < groups[i].subgroups.length; ++j) {
+      for (let k = 0; k < groups[i].subgroups[j].items.length; ++k) {
         if (k > 0 && k % 10 == 0) bump += 1;
 
-        const { item } = f_groups[i].subgroups[j].items[k];
+        const { item } = groups[i].subgroups[j].items[k];
 
         const x = i * 11 + (k % 10);
         const y = j + bump;
@@ -693,29 +740,49 @@ function robot_mall() {
         });
 
         if (item.stack_size) {
-          let count;
-          if (counts.has(item.key)) {
-            count = counts.get(item.key)!;
-            console.log(`${item.key} ${count} ${item.stack_size * 10}`)
-          } else if (include.includes(item.key)) {
-            count = item.stack_size * 10;
-          } else {
-            count = 0;
+          if (groups[i].name != 'intermediate-products' && groups[i].name != 'other') {
+            let count;
+            if (counts.has(item.key)) {
+              count = counts.get(item.key)!;
+              console.log(`${item.key} ${count} ${item.stack_size * 10}`)
+            } else if (include.includes(item.key)) {
+              count = item.stack_size * 10;
+            } else {
+              count = 0;
+            }
+
+            control_filters.push({
+              index: filter_index,
+              name: item.key,
+              count: 0,
+              quality: 'normal',
+              comparator: '=',
+            });
           }
 
-          section.filters.push({
+          priority_filters.push({
             index: filter_index,
             name: item.key,
-            count: 0,
+            count: get_priority(item.key),
             quality: 'normal',
             comparator: '=',
-          })
+          });
         }
       }
     }
 
-    if (section.filters.length > 0) {
-      control_combinator.control_behavior.sections.sections.push(section);
+    if (control_filters.length > 0) {
+      control_combinator.control_behavior.sections.sections.push({
+        index: control_combinator.control_behavior.sections.sections.length + 1,
+        filters: control_filters,
+      });
+    }
+
+    if (priority_filters.length > 0) {
+      priority_combinator.control_behavior.sections.sections.push({
+        index: priority_combinator.control_behavior.sections.sections.length + 1,
+        filters: priority_filters,
+      });
     }
   }
 
@@ -729,11 +796,27 @@ function robot_mall() {
 
   console.log(save_blueprint(storage));
   console.log(save_blueprint(controls));
+  console.log(save_blueprint(priorities));
+}
+
+function all_craftables(ingredients: string[]) {
+  const set = new Set(ingredients);
+
+  for (const group of groups) {
+    for (const subgroup of group.subgroups) {
+      for (const item of subgroup.items) {
+        if (item.recipe.ingredients.every(i => set.has(i.name))) {
+          console.log(`${item.item.key}`);
+        }
+      }
+    }
+  }
 }
 
 function experiments() {
   // const raw = '0eNqFkNtqwzAQRP9lnpUQB18SkT8pxciO2i7ohrQONUb/XsmB0odA33ZWe2Z2tWEyiw6RHENuoNm7BPm2IdGnU6b2eA0aEsTaQsApW1WyypiDUTYgC5C762/IJr8LaMfEpJ8uu1hHt9hJxzLwihcIPhXEu5pWbA590x47gbWUl+HYlYCyFkdvxkl/qQf5WCdnivNCPJa3+y/+QTHx+N/yy5RY7cjTu6h6/6kKG1RUXCNwQ871pJ2Wf35K4KFj2iPPl6Yd2uvQD82p7/qcfwDkxXE+';
-  const raw = '0eNptj81uhDAMhN9lzmm1ICi7eZWqqgLrXVkKDsoPKkJ5903g0sMefLDH/ma8Y7SJFs8SoXfw5CRAf+8I/BRj6yxuC0GDI81QEDPXzrrJzS7ySsgKLHf6g27zjwJJ5Mh0Uo5m+5U0j+Shm3f3CosL5cRJdSuYvlPYynI3FLTzXCDmlC+fQ6+OJKHuSposGf/xSFSSNrnaHzH1v68UrBmrjlQzKKzkw0Frr8Xi1g5ffalmyPkFGdtYnw==';
+  // const raw = '0eNptj81uhDAMhN9lzmm1ICi7eZWqqgLrXVkKDsoPKkJ5903g0sMefLDH/ma8Y7SJFs8SoXfw5CRAf+8I/BRj6yxuC0GDI81QEDPXzrrJzS7ySsgKLHf6g27zjwJJ5Mh0Uo5m+5U0j+Shm3f3CosL5cRJdSuYvlPYynI3FLTzXCDmlC+fQ6+OJKHuSposGf/xSFSSNrnaHzH1v68UrBmrjlQzKKzkw0Frr8Xi1g5ffalmyPkFGdtYnw==';
+  const raw = '0eNqdU9FugzAM/JXJz9kELZSCtC+ZEEqD10ULMUpCO1Tx73NCp/ahmqYhhGTnfBefzQUOZsLRaRuguYBWZD00bxfw+miliTkrB4QGnNQGFgHa9vgFTb6IByBDigYK+oR30M3SCkAbdNC4kqdg7uw0HNAxl3hQL2AkzyVkIz/TPO9qATOjq/KlrndZva3KJRLLg8HO0FH7oJXvzh+a44FO2h6heZfGowBymkXlSpe9lAIUGXKR2sVEXdTx2e+zqs6qPCuKepPvK8YxRybgkL4y9Q064LA2ovu75hXJ1aH1mE9tp+2JdcnNK/wWcc8+SPWZeBVN0f8yi6Y+BOV/AW3uQe3CLxvv1Qf2k7k6fzM4xvndebICFbn+ugA/bsFbbOhV0TiieyaH7ZMh2T/lPKKz1KHjnenToNZCFhilwy7MY3RF2p6B1+B9MmxRm3bnF/7J/lsBhzHMEAV+vwea7ucy0anoIanPqGRR3aRSNk69XefKtbcfRsAJnU9NlLtNXKGyKLJiW+6W5Rs07B4I';
   const src = load_blueprint(raw);
   console.log(JSON.stringify(src));
 
@@ -741,14 +824,25 @@ function experiments() {
     "entities": [
       {
         "entity_number": 1,
-        "name": "car",
+        "name": "gun-turret",
         "position": {
           "x": 0,
           "y": 0
         },
-        items: {
-          "nuclear-fuel": 1,
-        },
+        items: [
+          {
+            id: { name: "piercing-rounds-magazine" },
+            items: {
+              in_inventory: [
+                {
+                  inventory: 1,
+                  stack: 0,
+                  count: 20,
+                },
+              ],
+            },
+          },
+        ],
       },
     ],
     "item": "blueprint",
@@ -759,6 +853,12 @@ function experiments() {
   console.log(save_blueprint(x));
 }
 
+function experiments_decidercombinator() {
+  const x = '0eNq1lMFu2zAMht+FZ7moU6dDDOwteisCg7ZpV4AsuRLlzQj87qXsYNmCYUWG5iiK/H5SFHmC2kQavbYM5Ql042yA8vUEQfcWTbJZHAhKaKnRLfmscUOtLbLzsCjQtqWfUObLUQFZ1qxpi18Pc2XjUJMXB/UPjoLRBQl1NukJbqdghrJ42ItCqz01210udkmQvTNVTW84aQmWiDOykrt2xYRk/f0kCXXaB64uZfE8pnTCiA1lxjW4avxKszdUY6owvQhjep6nRd2MmaJp0MZwRUqHYURP1TkebQv/gbcYJ30veBdN7zzeiY7vURu3wRNv/QklfIevEgjOoM/CHJiGjNqe7qn1hszkqc1Gg5b4C6Qm7TmK5aKxemQvf/bj29+5Mo4u8hj5epo/ofeeyG4K4ywDFS1XnXdDpa3AoOzQBEpZ35Lvrf6fqB+XJdX3QxZDqu41VzuVq+IoNtbmvH+uNkq+bZTlorZ2UrrFnfND1olWuzU1sbX8GXG67EYFE/mw8vbPu0NxOOyL4rF42j8vywe5ctIF';
+  const src = load_blueprint(x);
+  console.log(JSON.stringify(src));
+}
+
 function dump_blueprint(raw: string) {
   const src = load_blueprint(raw);
   console.log(JSON.stringify(src, null, '  '));
@@ -767,6 +867,32 @@ function dump_blueprint(raw: string) {
 if (process.argv[2]) {
   dump_blueprint(process.argv[2])
 } else {
-  experiments();
+  for (const group of groups) {
+    console.log(`${group.name}`);
+    for (const subgroup of group.subgroups) {
+      console.log(`  ${subgroup.name}`);
+      for (const item of subgroup.items) {
+        console.log(`    ${item.item.key}`);
+      }
+    }
+  }
+  // console.log(all_craftables([
+  //   'iron-plate',
+  //   'iron-gear-wheel',
+
+  //   'transport-belt',
+  //   'pipe',
+  // ]));
+
+  // console.log('---');
+
+  // console.log(all_craftables([
+  //   'iron-plate',
+  //   'iron-gear-wheel',
+  //   'electronic-circuit',
+  // ]));
+
+  // experiments();
   // robot_mall();
+  experiments_decidercombinator();
 }

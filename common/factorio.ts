@@ -62,7 +62,7 @@ export interface Entity {
   orientation?: number;
   connections?: { [point: number]: ConnectionPoint };
   control_behavior?: any;
-  items?: { [name: string]: number };
+  items?: EntityItems[];
   recipe?: string;
   bar?: number;
   inventory?: Inventory;
@@ -84,6 +84,26 @@ export interface Entity {
   variation?: number;
   color?: Color;
   station?: string;
+}
+
+export interface EntityItems {
+  id: ItemIDAndQualityIDPair;
+  items: ItemInventoryPositions;
+}
+
+export interface ItemIDAndQualityIDPair {
+  name: string;
+  quality?: string;
+}
+
+export interface ItemInventoryPositions {
+  in_inventory: InventoryPosition[];
+}
+
+export interface InventoryPosition {
+  inventory: number,
+  stack: number,
+  count?: number,
 }
 
 export interface Inventory {
